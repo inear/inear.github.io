@@ -31,24 +31,29 @@
 
     var scene = new THREE.Scene;
 
-    var cubeGeometry = new THREE.CubeGeometry(100, 100, 100);
-    var cubeMaterial = new THREE.MeshLambertMaterial({
-      color: 0xFFFFFF
-    });
-    var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    var geometry = new THREE.IcosahedronGeometry(120,0);
 
-    cube.rotation.y = Math.PI * 45 / 180;
 
-    scene.add(cube);
+    var sprite = THREE.ImageUtils.loadTexture( "textures/disc.png" );
 
-    var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+
+    var material = new THREE.PointCloudMaterial( { size: 5, sizeAttenuation: false, map: sprite, transparent: true } );
+    material.color.setHSL( 1.0, 0.3, 0.7 );
+
+    var particles = new THREE.PointCloud( geometry, material );
+    particles.sortParticles = true;
+    scene.add( particles );
+
+    particles.rotation.x = Math.PI * 45 / 180;
+
+    var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
 
     camera.position.y = 160;
     camera.position.z = 400;
 
     scene.add(camera);
 
-    camera.lookAt(cube.position);
+    camera.lookAt(particles.position);
 
     var pointLight = new THREE.PointLight(0xffffff);
     pointLight.position.set(0, 300, 200);
@@ -58,7 +63,7 @@
 
     function render() {
       renderer.render(scene, camera);
-      cube.rotation.y -= clock.getDelta();
+      particles.rotation.y -= clock.getDelta();
       requestAnimationFrame(render);
     }
 
