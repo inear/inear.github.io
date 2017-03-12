@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      overflow:hidden;
+      background-color:#ffffff;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.1/TweenMax.min.js"></script>
+</head>
+
+<body>
+  <script>
+
+  THREE.ExplodeModifier = function () {
+
+  }
+
+  THREE.ExplodeModifier.prototype.modify = function (geometry) {
+    var vertices = []
+
+    for (var i = 0, il = geometry.faces.length; i < il; i++) {
+      var n = vertices.length
+
+      var face = geometry.faces[ i ]
+
+      var a = face.a
+      var b = face.b
+      var c = face.c
+
+      var va = geometry.vertices[ a ]
+      var vb = geometry.vertices[ b ]
+      var vc = geometry.vertices[ c ]
+
+      vertices.push(va.clone())
+      vertices.push(vb.clone())
+      vertices.push(vc.clone())
+
+      face.a = n
+      face.b = n + 1
+      face.c = n + 2
+    }
+
+    geometry.vertices = vertices
+  }
+
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+    var renderer = new THREE.WebGLRenderer({
+      antialias: true
+    });
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.setClearColor(0xffffff,1)
+    renderer.setSize(width, height);
+    document.body.appendChild(renderer.domElement);
+
+    var scene = new THREE.Scene;
+
+    var geometry = new THREE.IcosahedronGeometry(60,0);
+
+    geometry.computeFlatVertexNormals()
+
+    var mat = new THREE.MeshPhongMaterial({color:0xdddddd, emissive:0x444444})
+    var mesh1 = new THREE.Mesh(geometry, mat)
+    mesh1.position.x = -200
+    mesh1.castShadow = true
+    scene.add(mesh1)
+    mesh1.rotation.x = Math.PI * -45 / 180;
+    TweenMax.to(mesh1.position,3,{z:-240,repeat:-1,yoyo:true, ease:Power2.easeInOut})
+
+    var mesh2 = new THREE.Mesh(geometry, mat)
+    mesh2.position.x = 0
+    mesh2.castShadow = true
+    scene.add(mesh2)
+    mesh2.rotation.x = Math.PI * -45 / 180;
+    TweenMax.to(mesh2.rotation,3,{y:Math.PI*2, repeat:-1,yoyo:true, ease:Power2.easeInOut})
+
+    var mesh3 = new THREE.Mesh(geometry, mat)
+    mesh3.position.x = 200
+    mesh3.castShadow = true
+    scene.add(mesh3)
+    mesh3.rotation.x = Math.PI * -45 / 180;
+    TweenMax.to(mesh3.scale,3,{x:0.3, y:0.3, z:0.3, repeat:-1,yoyo:true, ease:Power2.easeInOut})
+
+    var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.y = 160;
+    camera.position.z = 400;
+    scene.add(camera);
+    camera.lookAt(mesh2.position);
+
+    var pointLight = new THREE.PointLight(0xffffff,0.1);
+    pointLight.position.set(0, 20, 350);
+    scene.add(pointLight)
+
+    var dirLight = new THREE.DirectionalLight(0xffffff);
+    dirLight.position.set(0, 200, -150);
+    dirLight.castShadow = true
+    dirLight.shadow.mapSize.width = 1024 * 2
+    dirLight.shadow.mapSize.height = 1024 * 2
+    dirLight.shadow.camera.left = -300
+    dirLight.shadow.camera.right = 300
+    dirLight.shadow.camera.top = 300
+    dirLight.shadow.camera.bottom = -300
+    dirLight.shadow.camera.near = 1
+    dirLight.shadow.camera.far = 1400
+    scene.add(dirLight);
+
+    var plane = new THREE.Mesh( new THREE.PlaneGeometry(2000,1000,3,3), new THREE.MeshLambertMaterial({color:0xffffff, emissive:0xeeeeee}))
+    plane.rotation.x = Math.PI*-0.5
+    plane.position.y =-60
+    plane.receiveShadow =true
+    scene.add(plane)
+
+    var clock = new THREE.Clock;
+
+    function render() {
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+
+    render();
+  </script>
+</body>
+</html>
