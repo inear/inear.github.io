@@ -1,0 +1,418 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<title>Tornado</title>
+	<meta charset="utf-8">
+	<link href="css/styles.css" type="text/css" rel="stylesheet"/>
+
+	<script type="text/javascript">
+		var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+		document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+		</script>
+		<script type="text/javascript">
+		try{
+		    var pageTracker = _gat._getTracker("UA-181266-1");
+		    pageTracker._trackPageview();
+		} catch(err) {}</script>
+
+	<script type="text/javascript" src="js/jquery-1.6.2.min.js"></script>
+
+
+	<!-- Shaders -->
+<script data-src="shaders/displacement_vertex.js" data-name="Displacement" type="x-shader/x-vertex"></script>
+<script data-src="shaders/displacement_fragment.js" data-name="Displacement" type="x-shader/x-fragment"></script>
+
+<script data-src="shaders/noise_vertex.js" data-name="Noise" type="x-shader/x-vertex"></script>
+<script data-src="shaders/noise_fragment.js" data-name="Noise" type="x-shader/x-fragment"></script>
+<!-- End Shaders -->
+
+<script type="text/javascript" src="js/dat.gui.js"></script>
+<script type="text/javascript" src="js/Detector.js"></script>
+<script type="text/javascript" src="js/Tween.js"></script>
+<script type="text/javascript" src="js/Three.js"></script>
+<!--<script type="text/javascript" src="js/GeometryUtils.js"></script>-->
+<script type="text/javascript" src="js/signals.js"></script>
+<script type="text/javascript" src="js/Library.js"></script>
+<script type="text/javascript" src="js/RequestAnimationFrame.js"></script>
+<script type="text/javascript">
+
+if (! Detector.webgl) {
+	Detector.addGetWebGLMessage();
+	document.getElementById('container').innerHTML = "";
+}
+
+//scene
+var TO_RADIANS = Math.PI / 180;
+var container, stats;
+var projector, camera, cameraTarget, scene, sceneRenderTarget, renderer, postRenderTarget, cameraOrtho;
+var quadTarget,mesh;
+var dirLight, ambientLight, pointLight;
+var displacementMaterial;
+
+var viewportWidth = window.innerWidth;
+var viewportHeight = window.innerHeight;
+var sphereRadius = 150;
+var properties;
+var gridMesh;
+
+var noiseMaterial,noiseMap;
+var uniforms, displacementUniforms;
+var particleCount;
+var particles;
+var particleSystem;
+var particleSpawnY;
+
+var currentTime = 0;
+
+var gridParts = [];
+
+var mouse2d = new THREE.Vector2();
+
+//start engine and loading
+$(document).ready(function(){
+	mainInit();
+});
+
+function mainInit() {
+
+	document.getElementById("wind").volume=0;
+
+	properties = {
+		smoke: 2,
+		heat: 0.0015,
+		shapeBiasX: 0.88,
+		shapeBiasY:0,
+		displacementScale:77,
+		displacementBias:-23,
+		turbulence:48,
+		twist:970,
+		intensity:0.6,
+		wireframes:false
+	}
+
+	LIBRARY.Shaders.loadedSignal.add( onShadersLoaded );
+	initShaderLoading();
+
+	var gui = new dat.GUI();
+	DAT.GUI.autoPlace = false;
+
+	$("#uiContainer").append(gui.domElement);
+
+	gui.add(properties, 'smoke').min(0).max(2.12).listen().onChange(function(newValue){
+		displacementUniforms.uSmoke.value = newValue;
+	});;
+
+	gui.add(properties, 'heat').min(0).max(0.0285).name("timescale").listen()
+
+	gui.add(properties, 'shapeBiasX').min(0).max(1).listen().onChange(function(newValue){
+		displacementUniforms.uShapeBias.value = new THREE.Vector2(newValue,properties.shapeBiasY);
+	});
+
+	gui.add(properties, 'shapeBiasY').min(0.42).max(1.5).listen().onChange(function(newValue){
+		displacementUniforms.uShapeBias.value = new THREE.Vector2(properties.shapeBiasX,newValue);
+	});
+
+	gui.add(properties, 'displacementScale').min(16).max(135).listen().onChange(function(newValue){
+		displacementUniforms.uDisplacementScale.value = newValue;
+	});
+
+	gui.add(properties, 'displacementBias').min(-40).max(-15).listen().onChange(function(newValue){
+		displacementUniforms.uDisplacementBias.value = newValue;
+	});
+
+	gui.add(properties, 'twist').min(0).max(1500).listen().onChange(function(newValue){
+		displacementUniforms.uTwist.value = newValue;
+	});
+
+	gui.add(properties,"wireframes").onChange(function(newValue){
+		displacementMaterial.wireframe = newValue;
+	});
+
+	gui.close();
+
+}
+
+function onShadersLoaded() {
+	console.log("shaders loaded");
+
+	//initSounds();
+	initEngine();
+	initObjects();
+	initParticles();
+	initStartState();
+
+	window.addEventListener( 'resize', onWindowResize, false );
+	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	onWindowResize();
+}
+
+
+function initEngine() {
+
+	container = document.getElementById('container');
+	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 700 );
+	camera.position.z = 80;
+	camera.position.y = -70;
+	camera.rotation.x = (50 + 0.5*30)*TO_RADIANS
+	camera.rotation.y =( 0.5*-30)*TO_RADIANS
+	camera.aspect = viewportWidth / viewportHeight;
+
+	scene = new THREE.Scene();
+
+	sceneRenderTarget = new THREE.Scene();
+
+	cameraOrtho = new THREE.OrthographicCamera(viewportWidth / - 2, viewportWidth / 2, viewportHeight / 2, viewportHeight / - 2, -10000, 10000);
+	cameraOrtho.position.z = 100;
+
+	var plane = new THREE.PlaneGeometry( viewportWidth, viewportHeight );
+
+	quadTarget = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: 0xff0000 } ) );
+	quadTarget.position.z = -500;
+	sceneRenderTarget.add( quadTarget );
+
+	renderer = new THREE.WebGLRenderer({ antialias: true});
+	renderer.setClearColorHex(0x000000,1.0)
+	renderer.setSize(viewportWidth,viewportHeight);
+
+	if ( renderer.getContext().getParameter(renderer.getContext().MAX_VERTEX_TEXTURE_IMAGE_UNITS) == 0){
+		return;
+	}
+
+	renderer.autoClear = false;
+	renderer.sortObjects = false;
+
+	container.innerHTML = "";
+	container.appendChild(renderer.domElement);
+
+}
+
+
+function initObjects() {
+
+	uniforms = {
+		time:  { type: "f", value: 1.0 },
+		uSpeed:  { type: "f", value: 1.0 },
+		scale: { type: "v2", value: new THREE.Vector2( 1, 1 ) }
+	};
+
+	noiseMaterial = new THREE.ShaderMaterial({
+		uniforms:		 uniforms,
+		vertexShader:   LIBRARY.Shaders.Noise.vertex,
+		fragmentShader: LIBRARY.Shaders.Noise.fragment
+	});
+
+	noiseMap  = new THREE.WebGLRenderTarget( 512, 512, { minFilter: THREE.LinearMipMapLinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat } );
+
+	displacementUniforms = {
+		time:  { type: "f", value: 1.0 },
+		tHeightMap:  { type: "t",  value: 1, texture: noiseMap },
+		uDisplacementBias: { type: "f", value: properties.displacementBias },
+		uDisplacementScale: { type: "f", value: properties.displacementScale },
+		uColor1: { type: "c", value: new THREE.Color( 0x666666 ) },
+		uColor2: { type: "c", value: new THREE.Color( 0x99aa9ff ) },
+		uSmoke: { type: "f", value: properties.smoke },
+		uShapeBias: { type: "v2", value: new THREE.Vector2(properties.shapeBiasX,properties.shapeBiasY) },
+		uScreenHeight: { type: "f", value: 800 },
+		uTurbulence: { type: "f", value: properties.turbulence },
+		uTwist: { type: "f", value: properties.twist }
+	};
+
+	displacementMaterial = new THREE.ShaderMaterial({
+		wireframe:false,
+		transparent:true,
+		uniforms:		displacementUniforms,
+		vertexShader:   LIBRARY.Shaders.Displacement.vertex,
+		fragmentShader: LIBRARY.Shaders.Displacement.fragment,
+		side: THREE.DoubleSide
+	});
+
+	var geometrySphere = new THREE.SphereGeometry( sphereRadius, 30, 100 );
+	geometrySphere.computeFaceNormals();
+	mesh = new THREE.Mesh( geometrySphere, displacementMaterial );
+
+	mesh.position.y = 0;
+	scene.add( mesh );
+
+	/*var dirLight = new THREE.DirectionalLight();
+	dirLight.position.set( 0, -1000, 0 );
+	dirLight.intensity = 0.8;
+    dirLight.lookAt(scene.position);
+	scene.add(dirLight);
+
+	var pointLight = new THREE.PointLight( 0xFFFFFF );
+	pointLight.intensity = 2;
+    pointLight.position.set( 50, 100, 0);
+
+	scene.add(pointLight);*/
+
+
+
+}
+
+function initParticles() {
+
+	particleCount = 400;
+	particles = new THREE.Geometry();
+	particles.dynamic = true;
+
+	var pMaterial = new THREE.ParticleBasicMaterial({
+			color: 0x444444,
+			size: 1,
+			opacity:0.6
+		});
+
+
+	for(var p = 0; p < particleCount; p++) {
+
+		var radius =  sphereRadius*0.3;
+		var angle = Math.random() * (Math.PI * 2)
+		var pX = Math.sin(angle) * radius,
+			pY = Math.random() * 800,
+			pZ = Math.cos(angle) * radius,
+		    particle = new THREE.Vector3(pX, pY, pZ);
+
+		particle.velocity = new THREE.Vector3(
+			Math.random(),				// x
+			Math.random()*3+1,	// y
+			Math.random());				// z
+
+		particles.vertices.push(particle);
+	}
+
+	// create the particle system
+
+	particleSystem = new THREE.ParticleSystem(
+		particles,
+		pMaterial);
+
+	particleSystem.position = camera.position.clone();
+
+	particleSystem.sortParticles = false;
+
+	// add it to the scene
+	mesh.add(particleSystem);
+}
+
+function initStartState() {
+
+	var tween = new TWEEN.Tween( {smoke:2, volume:0} )
+      .to( { smoke: 0.2, volume:1 }, 1500 )
+      .easing( TWEEN.Easing.Sinusoidal.EaseOut )
+      .onUpdate( function () {
+			//properties.smoke = this.smoke;
+			document.getElementById("wind").volume=this.volume;
+			displacementUniforms.uSmoke.value = this.smoke;
+		} )
+      .start();
+
+	animate();
+}
+
+//game loop
+function animate() {
+	requestAnimationFrame(animate);
+	render()
+}
+
+function render() {
+
+	renderer.clear();
+
+	currentTime += properties.heat*.3;
+
+	displacementUniforms.time.value = currentTime;
+
+
+	uniforms.uSpeed.value += properties.heat*0.5;
+	uniforms.time.value = currentTime;
+
+
+	var toRotX = (50 + mouse2d.y*30)*TO_RADIANS;
+	var toRotY = ( mouse2d.x*-30)*TO_RADIANS;
+	camera.rotation.x += (toRotX-camera.rotation.x)/8;
+	camera.rotation.y += (toRotY-camera.rotation.y)/8
+
+
+	mesh.rotation.y += properties.heat;
+
+
+	quadTarget.material = noiseMaterial;
+	renderer.render( sceneRenderTarget, cameraOrtho, noiseMap, true );
+
+
+	//update particles
+
+	var pCount = particleCount;
+	while(pCount--) {
+
+		var particle = particles.vertices[pCount];
+
+		if( particle ) {
+
+			if(particle.y > 800) {
+				particle.y = 0;
+				var radius =  sphereRadius*0.3;
+				var angle = Math.random() * (Math.PI * 2);
+				particle.x = Math.sin(angle) * radius;
+				particle.z = Math.cos(angle) * radius;
+			}
+
+			particle.x += Math.sin((currentTime*5 + particle.velocity.x));
+			particle.z += Math.cos((currentTime*5 + particle.velocity.x));
+			particle.y += properties.heat*100*particle.velocity.y;
+
+		}
+
+	}
+	particleSystem.geometry.verticesNeedUpdate = true
+
+	renderer.render( scene, camera );
+
+	TWEEN.update();
+
+}
+
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+
+	mouse2d.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse2d.y = 1- ( event.clientY / window.innerHeight );
+}
+
+
+function onWindowResize() {
+	 SCREEN_WIDTH = window.innerWidth;
+    SCREEN_HEIGHT = window.innerHeight;
+
+    renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+
+	camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+    camera.updateProjectionMatrix()
+
+    var leftPos = window.innerWidth*.5-SCREEN_WIDTH*.5
+    var topPos = window.innerHeight*.5-SCREEN_HEIGHT*.5
+
+    if( leftPos < 200 ) leftPos = 200;
+    if( topPos < -100 ) topPos = -100;
+
+    $("#container").css({left:0,top:0})
+}
+
+</script>
+
+</head>
+<body>
+
+
+<audio id="wind" autoplay loop style="display:none">
+	<source src="sounds/wind.mp3" type='audio/mp3'>
+	<source src="sounds/wind.ogg" type='audio/ogg'>
+</audio>
+<div id="uiContainer"></div>
+
+<div id="container"></div>
+
+</body>
+
+</html>
