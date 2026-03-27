@@ -1,0 +1,1209 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>🏎️ FAMOUS RACER — The $25M Racing Experience</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				background: #0a0a0a;
+				color: #fff;
+				font-family: 'Courier New', monospace;
+				overflow: hidden;
+				height: 100vh;
+				width: 100vw;
+			}
+
+			/* ===== STARTUP SCREEN ===== */
+			#startup-screen {
+				position: fixed;
+				inset: 0;
+				background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #0a0a0a 100%);
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				z-index: 1000;
+				transition: opacity 0.5s;
+			}
+
+			#startup-screen.hidden {
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			#startup-screen h1 {
+				font-size: 4rem;
+				background: linear-gradient(90deg, #ff6b35, #f7c948, #ff6b35);
+				background-size: 200% auto;
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				animation: shimmer 2s linear infinite;
+				margin-bottom: 0.5rem;
+			}
+
+			@keyframes shimmer {
+				to {
+					background-position: 200% center;
+				}
+			}
+
+			#startup-screen .subtitle {
+				font-size: 1.1rem;
+				color: #888;
+				margin-bottom: 2rem;
+				text-align: center;
+				max-width: 600px;
+				line-height: 1.6;
+			}
+
+			#startup-screen .subtitle em {
+				color: #f7c948;
+				font-style: normal;
+			}
+
+			#startup-screen .drama-quote {
+				font-size: 0.85rem;
+				color: #555;
+				margin-bottom: 2rem;
+				text-align: center;
+				max-width: 500px;
+				line-height: 1.5;
+				border-left: 2px solid #333;
+				padding-left: 1rem;
+			}
+
+			.start-btn {
+				padding: 1rem 3rem;
+				font-size: 1.2rem;
+				font-family: 'Courier New', monospace;
+				background: linear-gradient(135deg, #ff6b35, #e8540a);
+				color: white;
+				border: none;
+				cursor: pointer;
+				letter-spacing: 2px;
+				text-transform: uppercase;
+				transition:
+					transform 0.2s,
+					box-shadow 0.2s;
+			}
+
+			.start-btn:hover {
+				transform: scale(1.05);
+				box-shadow: 0 0 30px rgba(255, 107, 53, 0.4);
+			}
+
+			.tech-badge {
+				margin-top: 2rem;
+				padding: 0.5rem 1rem;
+				border: 1px solid #333;
+				font-size: 0.7rem;
+				color: #555;
+				letter-spacing: 1px;
+			}
+
+			.investor-note {
+				position: absolute;
+				bottom: 1.5rem;
+				font-size: 0.65rem;
+				color: #333;
+				text-align: center;
+				max-width: 500px;
+			}
+
+			/* ===== GAME CONTAINER ===== */
+			#game-container {
+				position: relative;
+				width: 100vw;
+				height: 100vh;
+				perspective: 800px;
+				perspective-origin: 50% 65%;
+				overflow: hidden;
+				background: linear-gradient(
+					180deg,
+					#1a0533 0%,
+					#2d1b69 40%,
+					#4a2c8a 60%,
+					#87ceeb 61%,
+					#87ceeb 100%
+				);
+			}
+
+			/* Sky */
+			#sky {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 60%;
+				background: linear-gradient(180deg, #0a0020 0%, #1a0533 30%, #3d1f6d 70%, #87ceeb 100%);
+				z-index: 0;
+			}
+
+			/* Road surface - the "3D" ground */
+			#road-surface {
+				position: absolute;
+				bottom: 0;
+				left: -50%;
+				width: 200%;
+				height: 55%;
+				background: #333;
+				transform-origin: bottom center;
+				transform: rotateX(60deg);
+				z-index: 1;
+			}
+
+			/* Road markings container */
+			#road-markings {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				height: 55%;
+				transform-origin: bottom center;
+				transform: rotateX(60deg);
+				z-index: 2;
+			}
+
+			.road-line {
+				position: absolute;
+				width: 8px;
+				height: 60px;
+				background: #f7c948;
+				left: 50%;
+				transform: translateX(-50%);
+			}
+
+			/* Side strips */
+			.side-strip {
+				position: absolute;
+				height: 100%;
+				width: 4px;
+				z-index: 2;
+			}
+
+			.side-strip.left {
+				left: 30%;
+				background: repeating-linear-gradient(
+					to bottom,
+					#ff3333 0px,
+					#ff3333 20px,
+					#ffffff 20px,
+					#ffffff 40px
+				);
+			}
+
+			.side-strip.right {
+				right: 30%;
+				background: repeating-linear-gradient(
+					to bottom,
+					#ff3333 0px,
+					#ff3333 20px,
+					#ffffff 20px,
+					#ffffff 40px
+				);
+			}
+
+			/* Player car */
+			#player-car {
+				position: absolute;
+				bottom: 8%;
+				left: 50%;
+				transform: translateX(-50%);
+				z-index: 50;
+				transition: left 0.1s ease-out;
+			}
+
+			.car-body {
+				width: 60px;
+				height: 100px;
+				background: linear-gradient(180deg, #ff3333 0%, #cc0000 100%);
+				border-radius: 10px 10px 5px 5px;
+				position: relative;
+				box-shadow:
+					0 5px 15px rgba(0, 0, 0, 0.5),
+					inset 0 -20px 30px rgba(0, 0, 0, 0.3);
+			}
+
+			.car-body::before {
+				content: '';
+				position: absolute;
+				top: 15px;
+				left: 8px;
+				right: 8px;
+				height: 25px;
+				background: rgba(100, 200, 255, 0.4);
+				border-radius: 5px 5px 0 0;
+				border: 1px solid rgba(255, 255, 255, 0.2);
+			}
+
+			.car-body::after {
+				content: 'famous';
+				position: absolute;
+				bottom: 8px;
+				left: 50%;
+				transform: translateX(-50%);
+				font-size: 8px;
+				color: rgba(255, 255, 255, 0.6);
+				letter-spacing: 1px;
+				font-family: 'Courier New', monospace;
+			}
+
+			.car-wheel {
+				position: absolute;
+				width: 12px;
+				height: 20px;
+				background: #222;
+				border-radius: 3px;
+				border: 1px solid #444;
+			}
+
+			.car-wheel.fl {
+				top: 10px;
+				left: -8px;
+			}
+			.car-wheel.fr {
+				top: 10px;
+				right: -8px;
+			}
+			.car-wheel.bl {
+				bottom: 10px;
+				left: -8px;
+			}
+			.car-wheel.br {
+				bottom: 10px;
+				right: -8px;
+			}
+
+			/* Obstacle cars */
+			.obstacle-car {
+				position: absolute;
+				z-index: 30;
+				transition: none;
+			}
+
+			.obstacle-body {
+				width: 50px;
+				height: 80px;
+				border-radius: 8px 8px 4px 4px;
+				position: relative;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+			}
+
+			.obstacle-body::before {
+				content: '';
+				position: absolute;
+				top: 12px;
+				left: 6px;
+				right: 6px;
+				height: 20px;
+				background: rgba(100, 200, 255, 0.3);
+				border-radius: 4px 4px 0 0;
+			}
+
+			/* Scenery objects */
+			.scenery-item {
+				position: absolute;
+				z-index: 10;
+				font-size: 2rem;
+			}
+
+			/* HUD */
+			#hud {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				padding: 1rem 1.5rem;
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				z-index: 100;
+				pointer-events: none;
+			}
+
+			.hud-panel {
+				background: rgba(0, 0, 0, 0.7);
+				backdrop-filter: blur(10px);
+				padding: 0.8rem 1.2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+
+			.hud-label {
+				font-size: 0.6rem;
+				color: #888;
+				letter-spacing: 2px;
+				text-transform: uppercase;
+				margin-bottom: 0.2rem;
+			}
+
+			.hud-value {
+				font-size: 1.5rem;
+				color: #f7c948;
+				font-weight: bold;
+			}
+
+			.hud-center {
+				text-align: center;
+			}
+
+			.hud-center .hud-label {
+				color: #ff6b35;
+			}
+
+			/* FPS counter - the Famous special */
+			#fps-counter {
+				position: fixed;
+				bottom: 1rem;
+				right: 1rem;
+				padding: 0.5rem 0.8rem;
+				background: rgba(0, 0, 0, 0.8);
+				border: 1px solid #333;
+				font-size: 0.7rem;
+				color: #ff3333;
+				z-index: 100;
+				font-family: 'Courier New', monospace;
+			}
+
+			#fps-counter .fps-value {
+				color: #ff6b35;
+				font-size: 1rem;
+			}
+
+			/* Commentary ticker */
+			#commentary {
+				position: fixed;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				padding: 0.6rem 1rem;
+				background: rgba(0, 0, 0, 0.85);
+				border-top: 1px solid #333;
+				font-size: 0.75rem;
+				color: #888;
+				z-index: 100;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+
+			#commentary .ticker-text {
+				display: inline-block;
+				animation: ticker 30s linear infinite;
+			}
+
+			@keyframes ticker {
+				from {
+					transform: translateX(100vw);
+				}
+				to {
+					transform: translateX(-200%);
+				}
+			}
+
+			/* Game over screen */
+			#game-over {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.9);
+				display: none;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				z-index: 200;
+			}
+
+			#game-over.visible {
+				display: flex;
+			}
+
+			#game-over h2 {
+				font-size: 3rem;
+				color: #ff3333;
+				margin-bottom: 1rem;
+			}
+
+			#game-over .final-score {
+				font-size: 1.5rem;
+				color: #f7c948;
+				margin-bottom: 0.5rem;
+			}
+
+			#game-over .death-message {
+				font-size: 0.9rem;
+				color: #888;
+				margin-bottom: 2rem;
+				text-align: center;
+				max-width: 400px;
+				line-height: 1.5;
+			}
+
+			/* "Loading" jank overlay - the Famous experience */
+			#jank-overlay {
+				position: fixed;
+				inset: 0;
+				background: #0a0a0a;
+				z-index: 500;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				transition: opacity 0.3s;
+			}
+
+			#jank-overlay.hidden {
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			#jank-overlay .loading-text {
+				font-size: 1rem;
+				color: #888;
+				margin-bottom: 1rem;
+			}
+
+			#jank-overlay .loading-bar-track {
+				width: 300px;
+				height: 4px;
+				background: #222;
+				overflow: hidden;
+			}
+
+			#jank-overlay .loading-bar-fill {
+				height: 100%;
+				background: #ff6b35;
+				width: 0%;
+				transition: width 0.1s;
+			}
+
+			#jank-overlay .loading-detail {
+				margin-top: 1rem;
+				font-size: 0.65rem;
+				color: #444;
+			}
+
+			/* Stars in sky */
+			.star {
+				position: absolute;
+				width: 2px;
+				height: 2px;
+				background: white;
+				border-radius: 50%;
+				z-index: 0;
+			}
+
+			/* Controls hint */
+			#controls-hint {
+				position: fixed;
+				bottom: 3rem;
+				left: 50%;
+				transform: translateX(-50%);
+				font-size: 0.7rem;
+				color: #555;
+				z-index: 100;
+				text-align: center;
+				pointer-events: none;
+				transition: opacity 2s;
+			}
+
+			#controls-hint.faded {
+				opacity: 0;
+			}
+
+			/* Mobile touch zones */
+			.touch-zone {
+				display: none;
+				position: fixed;
+				bottom: 0;
+				width: 50%;
+				height: 40%;
+				z-index: 90;
+				opacity: 0;
+			}
+
+			.touch-zone.left {
+				left: 0;
+			}
+			.touch-zone.right {
+				right: 0;
+			}
+
+			@media (pointer: coarse) {
+				.touch-zone {
+					display: block;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Fake loading screen for authenticity -->
+		<div id="jank-overlay">
+			<div class="loading-text">Initializing Famous Engine v0.∞...</div>
+			<div class="loading-bar-track">
+				<div class="loading-bar-fill" id="loading-bar"></div>
+			</div>
+			<div class="loading-detail" id="loading-detail">Allocating GPU surfaces...</div>
+		</div>
+
+		<!-- Start screen -->
+		<div id="startup-screen" class="hidden">
+			<h1>🏎️ FAMOUS RACER</h1>
+			<p class="subtitle">
+				The <em>$25 million</em> racing experience,<br />
+				powered by CSS transforms and broken promises.<br />
+				<br />
+				Vibecoded with the engine that couldn't.
+			</p>
+			<p class="drama-quote">
+				"Why use Three.js when you can rotate divs in 3D space and call it a physics engine?" — No
+				one, ever
+			</p>
+			<button class="start-btn" id="start-btn" onclick="startGame()">▶ VIBECODE THIS RACE</button>
+			<div class="tech-badge">
+				POWERED BY FAMOUS™ (CSS3 TRANSFORMS) • NOT THREE.JS • DEFINITELY NOT SKETCHFAB ASSETS
+			</div>
+			<p class="investor-note">
+				Series A funded. Still in beta. Always in beta. We promise the WebGL renderer is coming in
+				Q4 2014.
+			</p>
+		</div>
+
+		<!-- Game -->
+		<div id="game-container" style="display: none">
+			<div id="sky"></div>
+			<div id="road-surface"></div>
+			<div id="road-markings"></div>
+			<div
+				class="side-strip left"
+				style="
+					position: absolute;
+					bottom: 0;
+					height: 55%;
+					transform-origin: bottom center;
+					transform: rotateX(60deg);
+					z-index: 2;
+				"
+			></div>
+			<div
+				class="side-strip right"
+				style="
+					position: absolute;
+					bottom: 0;
+					height: 55%;
+					transform-origin: bottom center;
+					transform: rotateX(60deg);
+					z-index: 2;
+				"
+			></div>
+			<div id="scenery-container"></div>
+
+			<div id="player-car">
+				<div class="car-body">
+					<div class="car-wheel fl"></div>
+					<div class="car-wheel fr"></div>
+					<div class="car-wheel bl"></div>
+					<div class="car-wheel br"></div>
+				</div>
+			</div>
+		</div>
+
+		<!-- HUD -->
+		<div id="hud" style="display: none">
+			<div class="hud-panel">
+				<div class="hud-label">Score</div>
+				<div class="hud-value" id="score-display">0</div>
+			</div>
+			<div class="hud-panel hud-center">
+				<div class="hud-label">Engine Status</div>
+				<div class="hud-value" id="engine-status">NOMINAL</div>
+			</div>
+			<div class="hud-panel">
+				<div class="hud-label">Speed</div>
+				<div class="hud-value" id="speed-display">0 km/h</div>
+			</div>
+		</div>
+
+		<!-- FPS Counter -->
+		<div id="fps-counter" style="display: none">
+			FAMOUS FPS: <span class="fps-value" id="fps-value">60</span> <br /><span
+				id="fps-note"
+				style="font-size: 0.55rem; color: #444"
+				>* adjusted for investor demos</span
+			>
+		</div>
+
+		<!-- Controls hint -->
+		<div id="controls-hint" style="display: none">
+			← → Arrow keys or A/D to steer &nbsp;|&nbsp; Touch left/right on mobile
+		</div>
+
+		<!-- Commentary ticker -->
+		<div id="commentary" style="display: none">
+			<span class="ticker-text" id="ticker-text"></span>
+		</div>
+
+		<!-- Touch zones for mobile -->
+		<div class="touch-zone left" id="touch-left"></div>
+		<div class="touch-zone right" id="touch-right"></div>
+
+		<!-- Game Over -->
+		<div id="game-over">
+			<h2>💥 CRASHED</h2>
+			<div class="final-score" id="final-score">Score: 0</div>
+			<div class="death-message" id="death-message"></div>
+			<button class="start-btn" onclick="restartGame()">↻ PIVOT & RETRY</button>
+			<div class="tech-badge" style="margin-top: 1.5rem">
+				THIS CRASH WAS RENDERED ENTIRELY WITH CSS TRANSFORMS
+			</div>
+		</div>
+
+		<script type="module">
+			// =============================================================
+			//  FAMOUS ENGINE™ — A loving parody/reimplementation
+			//  "60fps on every device" (citation needed)
+			// =============================================================
+
+			class FamousSurface {
+				constructor(options = {}) {
+					this.el = document.createElement('div');
+					this.el.style.position = 'absolute';
+					this.el.style.willChange = 'transform'; // the Famous magic
+					if (options.size) {
+						this.el.style.width = options.size[0] + 'px';
+						this.el.style.height = options.size[1] + 'px';
+					}
+					if (options.content) this.el.innerHTML = options.content;
+					if (options.classes) options.classes.forEach((c) => this.el.classList.add(c));
+					if (options.properties) Object.assign(this.el.style, options.properties);
+
+					this._transform = { x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0, scale: 1 };
+				}
+
+				setTransform(t) {
+					Object.assign(this._transform, t);
+					this._apply();
+				}
+
+				_apply() {
+					const { x, y, z, rotX, rotY, rotZ, scale } = this._transform;
+					this.el.style.transform =
+						`translate3d(${x}px, ${y}px, ${z}px) ` +
+						`rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) ` +
+						`scale(${scale})`;
+				}
+
+				mount(parent) {
+					(parent || document.body).appendChild(this.el);
+					return this;
+				}
+
+				destroy() {
+					this.el.remove();
+				}
+			}
+
+			class FamousEngine {
+				constructor() {
+					this._surfaces = [];
+					this._running = false;
+					this._tick = 0;
+					this._lastTime = 0;
+					this._fps = 60;
+					this._onTick = null;
+					this._jankCounter = 0;
+				}
+
+				createSurface(options) {
+					const s = new FamousSurface(options);
+					this._surfaces.push(s);
+					return s;
+				}
+
+				removeSurface(s) {
+					const idx = this._surfaces.indexOf(s);
+					if (idx !== -1) this._surfaces.splice(idx, 1);
+					s.destroy();
+				}
+
+				start(callback) {
+					this._running = true;
+					this._onTick = callback;
+					this._lastTime = performance.now();
+					this._loop();
+				}
+
+				stop() {
+					this._running = false;
+				}
+
+				_loop() {
+					if (!this._running) return;
+
+					const now = performance.now();
+					const dt = now - this._lastTime;
+					this._lastTime = now;
+					this._tick++;
+
+					// Calculate "FPS" (with Famous-style creative accounting)
+					this._fps = Math.min(60, 1000 / Math.max(dt, 1));
+
+					// Simulate Famous jank every ~200 frames (garbage collection vibes)
+					this._jankCounter++;
+					if (this._jankCounter > 200 + Math.random() * 100) {
+						this._jankCounter = 0;
+						// Famous "micro-jank" — briefly tank the reported FPS
+						this._fps = 12 + Math.random() * 8;
+					}
+
+					if (this._onTick) this._onTick(dt, this._tick);
+
+					requestAnimationFrame(() => this._loop());
+				}
+
+				getFPS() {
+					return this._fps;
+				}
+			}
+
+			// =============================================================
+			//  GAME STATE
+			// =============================================================
+
+			const engine = new FamousEngine();
+			const gameContainer = document.getElementById('game-container');
+			const playerCar = document.getElementById('player-car');
+			const scoreDisplay = document.getElementById('score-display');
+			const speedDisplay = document.getElementById('speed-display');
+			const engineStatus = document.getElementById('engine-status');
+			const fpsValue = document.getElementById('fps-value');
+			const fpsNote = document.getElementById('fps-note');
+			const controlsHint = document.getElementById('controls-hint');
+			const gameOverScreen = document.getElementById('game-over');
+			const finalScore = document.getElementById('final-score');
+			const deathMessage = document.getElementById('death-message');
+
+			let state = {
+				running: false,
+				score: 0,
+				speed: 80,
+				maxSpeed: 220,
+				playerX: 50, // percentage from left
+				steerSpeed: 0,
+				roadOffset: 0,
+				obstacles: [],
+				scenery: [],
+				engineWarnings: 0,
+				totalDistance: 0
+			};
+
+			const keys = { left: false, right: false };
+			const ROAD_LEFT = 25;
+			const ROAD_RIGHT = 75;
+			const OBSTACLE_COLORS = ['#3366ff', '#33cc33', '#ff33cc', '#ffcc00', '#33ccff', '#ff6600'];
+
+			const ENGINE_STATUSES = [
+				'NOMINAL',
+				'NOMINAL',
+				'NOMINAL',
+				'VIBING',
+				'SLIGHTLY CONCERNED',
+				'GPU SURFACE OVERFLOW',
+				'TRANSFORM MATRIX ERROR',
+				'JANK DETECTED',
+				'INVESTOR DEMO MODE',
+				'PIVOTING...',
+				'SERIES B NEEDED',
+				'CSS IS MY PASSION',
+				'WHO NEEDS WEBGL'
+			];
+
+			const DEATH_MESSAGES = [
+				'Your car was rendered with CSS transforms. It was never going to end well.',
+				"You crashed into a div. A literal div. Famous couldn't even make it a canvas element.",
+				'The $25M ran out mid-collision. No physics engine was ever implemented.',
+				'Mr. Doob would never. Actually, Mr. Doob would — but with proper WebGL.',
+				'This is what happens when your game engine is just requestAnimationFrame and vibes.',
+				'Famous promised 60fps. You got 60 divs per second. Close enough?',
+				"Your car's collision box was a CSS border-box. That's not how collision detection works.",
+				'The Series A investors are requesting a refund.',
+				"Error: Cannot read property 'velocity' of undefined — because Famous never had physics.",
+				'Achievement unlocked: Crashed a car made of absolutely positioned divs.'
+			];
+
+			const TICKER_MESSAGES = [
+				"BREAKING: Famous engine confirms CSS transforms are 'basically the same as WebGL' ",
+				' • LIVE: Mr. Doob spotted vibecoding with stolen Sketchfab assets, reaches lap 47 ',
+				' • UPDATE: Famous Series B pitch deck now includes this racing game as proof of concept ',
+				' • RUMOR: Famous CEO seen converting all Three.js examples to div rotations ',
+				" • FACT CHECK: 'GPU-accelerated CSS' does not mean what Famous thinks it means ",
+				" • DEVELOPING: Open source community debates whether racing a div counts as 'gaming' ",
+				' • EXCLUSIVE: The real race was the venture capital we burned along the way ',
+				' • SATIRE ALERT: No actual 3D engines were harmed in the making of this game ',
+				" • MARKETS: Famous stock (FAMO) down 99.7% since its 'revolutionary engine' launch ",
+				" • OPINION: 'If we just add more will-change: transform, it becomes a real game engine' "
+			];
+
+			// =============================================================
+			//  LOADING SEQUENCE (authentic Famous experience)
+			// =============================================================
+
+			const loadingSteps = [
+				{ msg: 'Allocating GPU surfaces...', pct: 5 },
+				{ msg: 'Initializing CSS3 transform pipeline...', pct: 15 },
+				{ msg: 'Loading div-based physics engine...', pct: 22 },
+				{ msg: 'Compiling border-radius shaders...', pct: 30 },
+				{ msg: 'Bootstrapping will-change: everything...', pct: 40 },
+				{ msg: 'Pre-computing translate3d(0,0,0) hack...', pct: 48 },
+				{ msg: 'Optimizing z-index render pipeline...', pct: 55 },
+				{ msg: 'Warming up requestAnimationFrame (x1)...', pct: 62 },
+				{ msg: 'Polyfilling missing WebGL with innerHTML...', pct: 70 },
+				{ msg: 'Promising investors 60fps...', pct: 78 },
+				{ msg: 'Patching memory leak #4,729...', pct: 83 },
+				{ msg: 'Downgrading expectations...', pct: 90 },
+				{ msg: 'Rendering race track from pure CSS...', pct: 95 },
+				{ msg: 'Ready. (Engine status: questionable)', pct: 100 }
+			];
+
+			async function runLoadingSequence() {
+				const overlay = document.getElementById('jank-overlay');
+				const bar = document.getElementById('loading-bar');
+				const detail = document.getElementById('loading-detail');
+
+				for (const step of loadingSteps) {
+					detail.textContent = step.msg;
+					bar.style.width = step.pct + '%';
+					// Simulate janky loading with random delays
+					await new Promise((r) => setTimeout(r, 150 + Math.random() * 300));
+				}
+
+				await new Promise((r) => setTimeout(r, 500));
+				overlay.classList.add('hidden');
+				document.getElementById('startup-screen').classList.remove('hidden');
+			}
+
+			// =============================================================
+			//  GAME LOGIC
+			// =============================================================
+
+			function createStars() {
+				const sky = document.getElementById('sky');
+				for (let i = 0; i < 60; i++) {
+					const star = document.createElement('div');
+					star.className = 'star';
+					star.style.left = Math.random() * 100 + '%';
+					star.style.top = Math.random() * 100 + '%';
+					star.style.opacity = (0.3 + Math.random() * 0.7).toString();
+					star.style.width = star.style.height = 1 + Math.random() * 2 + 'px';
+					sky.appendChild(star);
+				}
+			}
+
+			function spawnObstacle() {
+				const lane = ROAD_LEFT + 5 + Math.random() * (ROAD_RIGHT - ROAD_LEFT - 10);
+				const color = OBSTACLE_COLORS[Math.floor(Math.random() * OBSTACLE_COLORS.length)];
+
+				const surface = engine.createSurface({
+					classes: ['obstacle-car'],
+					content: `<div class="obstacle-body" style="background: linear-gradient(180deg, ${color}, ${darkenColor(color)});">
+          <div class="car-wheel fl" style="position:absolute;width:10px;height:16px;background:#222;border-radius:2px;border:1px solid #444;top:8px;left:-6px;"></div>
+          <div class="car-wheel fr" style="position:absolute;width:10px;height:16px;background:#222;border-radius:2px;border:1px solid #444;top:8px;right:-6px;"></div>
+          <div class="car-wheel bl" style="position:absolute;width:10px;height:16px;background:#222;border-radius:2px;border:1px solid #444;bottom:8px;left:-6px;"></div>
+          <div class="car-wheel br" style="position:absolute;width:10px;height:16px;background:#222;border-radius:2px;border:1px solid #444;bottom:8px;right:-6px;"></div>
+        </div>`
+				});
+
+				surface.mount(gameContainer);
+
+				const obs = {
+					surface,
+					x: lane,
+					y: 30, // start far away (percentage from top)
+					speed: 0.3 + Math.random() * 0.4,
+					scale: 0.3
+				};
+
+				state.obstacles.push(obs);
+			}
+
+			function spawnScenery() {
+				const side = Math.random() > 0.5 ? 'left' : 'right';
+				const emojis = ['🌲', '🌳', '🏠', '🏢', '⛽', '🚧', '🏗️', '📡', '🗼'];
+				const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+
+				const surface = engine.createSurface({
+					classes: ['scenery-item'],
+					content: emoji
+				});
+
+				surface.mount(gameContainer);
+
+				const sc = {
+					surface,
+					x: side === 'left' ? 5 + Math.random() * 15 : 80 + Math.random() * 15,
+					y: 35,
+					speed: 0.5,
+					scale: 0.3
+				};
+
+				state.scenery.push(sc);
+			}
+
+			function darkenColor(hex) {
+				const num = parseInt(hex.replace('#', ''), 16);
+				const r = Math.max(0, (num >> 16) - 40);
+				const g = Math.max(0, ((num >> 8) & 0xff) - 40);
+				const b = Math.max(0, (num & 0xff) - 40);
+				return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+			}
+
+			function checkCollision(obs) {
+				const playerLeft = state.playerX - 3;
+				const playerRight = state.playerX + 3;
+				const obsLeft = obs.x - 2.5;
+				const obsRight = obs.x + 2.5;
+
+				if (obs.y > 85 && obs.y < 98) {
+					if (playerRight > obsLeft && playerLeft < obsRight) {
+						return true;
+					}
+				}
+				return false;
+			}
+
+			function updateRoadMarkings(dt) {
+				state.roadOffset += state.speed * dt * 0.01;
+				const markings = document.getElementById('road-markings');
+
+				// Recreate road lines based on offset
+				while (markings.firstChild) markings.removeChild(markings.firstChild);
+
+				const spacing = 100;
+				const numLines = 8;
+				for (let i = 0; i < numLines; i++) {
+					const line = document.createElement('div');
+					line.className = 'road-line';
+					const pos = (state.roadOffset + i * spacing) % (numLines * spacing);
+					line.style.bottom = pos + 'px';
+					line.style.opacity = Math.max(0.1, 1 - pos / (numLines * spacing));
+					markings.appendChild(line);
+				}
+			}
+
+			function gameOver() {
+				state.running = false;
+				engine.stop();
+
+				gameOverScreen.classList.add('visible');
+				finalScore.textContent = `Score: ${Math.floor(state.score)}`;
+				deathMessage.textContent =
+					DEATH_MESSAGES[Math.floor(Math.random() * DEATH_MESSAGES.length)];
+			}
+
+			function gameTick(dt, tick) {
+				if (!state.running) return;
+
+				const dtSec = Math.min(dt, 50) / 1000; // cap delta for tab switches
+
+				// Gradually increase speed
+				state.speed = Math.min(state.maxSpeed, state.speed + dtSec * 3);
+				state.score += dtSec * state.speed * 0.1;
+				state.totalDistance += dtSec * state.speed;
+
+				// Steering
+				if (keys.left) state.steerSpeed = Math.max(-2.5, state.steerSpeed - dtSec * 8);
+				else if (keys.right) state.steerSpeed = Math.min(2.5, state.steerSpeed + dtSec * 8);
+				else state.steerSpeed *= 0.92; // friction
+
+				state.playerX += state.steerSpeed;
+				state.playerX = Math.max(ROAD_LEFT + 3, Math.min(ROAD_RIGHT - 3, state.playerX));
+
+				playerCar.style.left = state.playerX + '%';
+				playerCar.style.transform = `translateX(-50%) rotateZ(${-state.steerSpeed * 3}deg)`;
+
+				// Road animation
+				updateRoadMarkings(dt);
+
+				// Spawn obstacles
+				if (tick % Math.max(30, 80 - Math.floor(state.speed / 5)) === 0) {
+					spawnObstacle();
+				}
+
+				// Spawn scenery
+				if (tick % 45 === 0) {
+					spawnScenery();
+				}
+
+				// Update obstacles
+				for (let i = state.obstacles.length - 1; i >= 0; i--) {
+					const obs = state.obstacles[i];
+					obs.y += (state.speed * 0.08 - obs.speed * 10) * dtSec * 3;
+					obs.scale = 0.3 + ((obs.y - 30) / 100) * 1.2;
+
+					if (obs.scale < 0) obs.scale = 0;
+
+					obs.surface.el.style.left = obs.x + '%';
+					obs.surface.el.style.top = obs.y + '%';
+					obs.surface.el.style.transform = `translate(-50%, -50%) scale(${obs.scale})`;
+
+					// Collision check
+					if (checkCollision(obs)) {
+						gameOver();
+						return;
+					}
+
+					// Remove if off screen
+					if (obs.y > 110) {
+						engine.removeSurface(obs.surface);
+						state.obstacles.splice(i, 1);
+					}
+				}
+
+				// Update scenery
+				for (let i = state.scenery.length - 1; i >= 0; i--) {
+					const sc = state.scenery[i];
+					sc.y += state.speed * 0.05 * dtSec * 3;
+					sc.scale = 0.3 + ((sc.y - 35) / 80) * 2;
+
+					sc.surface.el.style.left = sc.x + '%';
+					sc.surface.el.style.top = sc.y + '%';
+					sc.surface.el.style.transform = `scale(${Math.max(0, sc.scale)})`;
+
+					if (sc.y > 110) {
+						engine.removeSurface(sc.surface);
+						state.scenery.splice(i, 1);
+					}
+				}
+
+				// Update HUD
+				scoreDisplay.textContent = Math.floor(state.score);
+				speedDisplay.textContent = Math.floor(state.speed) + ' km/h';
+
+				// Update FPS (with Famous creative accounting)
+				const displayFps = engine.getFPS();
+				fpsValue.textContent = Math.floor(displayFps);
+				if (displayFps < 30) {
+					fpsValue.style.color = '#ff3333';
+					fpsNote.textContent = '* experiencing Famous-grade jank';
+				} else if (displayFps < 50) {
+					fpsValue.style.color = '#ffcc00';
+					fpsNote.textContent = '* "optimizing GPU surfaces"';
+				} else {
+					fpsValue.style.color = '#33ff33';
+					fpsNote.textContent = '* adjusted for investor demos';
+				}
+
+				// Random engine status changes
+				if (tick % 300 === 0) {
+					state.engineWarnings++;
+					const status =
+						ENGINE_STATUSES[Math.min(state.engineWarnings, ENGINE_STATUSES.length - 1)];
+					engineStatus.textContent = status;
+					if (state.engineWarnings > 3) {
+						engineStatus.style.color = '#ff6b35';
+					}
+					if (state.engineWarnings > 7) {
+						engineStatus.style.color = '#ff3333';
+					}
+				}
+
+				// Fade controls hint
+				if (tick === 180) {
+					controlsHint.classList.add('faded');
+				}
+			}
+
+			// =============================================================
+			//  GAME LIFECYCLE
+			// =============================================================
+
+			function initTicker() {
+				const shuffled = TICKER_MESSAGES.sort(() => Math.random() - 0.5);
+				document.getElementById('ticker-text').textContent = shuffled.join(' ★ ');
+			}
+
+			window.startGame = function () {
+				document.getElementById('startup-screen').classList.add('hidden');
+				document.getElementById('game-container').style.display = 'block';
+				document.getElementById('hud').style.display = 'flex';
+				document.getElementById('fps-counter').style.display = 'block';
+				document.getElementById('controls-hint').style.display = 'block';
+				document.getElementById('commentary').style.display = 'block';
+				document.getElementById('touch-left').style.display = 'block';
+				document.getElementById('touch-right').style.display = 'block';
+
+				initTicker();
+
+				state = {
+					running: true,
+					score: 0,
+					speed: 80,
+					maxSpeed: 220,
+					playerX: 50,
+					steerSpeed: 0,
+					roadOffset: 0,
+					obstacles: [],
+					scenery: [],
+					engineWarnings: 0,
+					totalDistance: 0
+				};
+
+				engineStatus.textContent = 'NOMINAL';
+				engineStatus.style.color = '#f7c948';
+
+				engine.start(gameTick);
+			};
+
+			window.restartGame = function () {
+				// Clean up old surfaces
+				state.obstacles.forEach((o) => o.surface.destroy());
+				state.scenery.forEach((s) => s.surface.destroy());
+				gameOverScreen.classList.remove('visible');
+				controlsHint.classList.remove('faded');
+				window.startGame();
+			};
+
+			// =============================================================
+			//  INPUT HANDLING
+			// =============================================================
+
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+				if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+			});
+
+			document.addEventListener('keyup', (e) => {
+				if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+				if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+			});
+
+			// Touch controls
+			document.getElementById('touch-left').addEventListener('touchstart', (e) => {
+				e.preventDefault();
+				keys.left = true;
+			});
+			document.getElementById('touch-left').addEventListener('touchend', () => {
+				keys.left = false;
+			});
+
+			document.getElementById('touch-right').addEventListener('touchstart', (e) => {
+				e.preventDefault();
+				keys.right = true;
+			});
+			document.getElementById('touch-right').addEventListener('touchend', () => {
+				keys.right = false;
+			});
+
+			// =============================================================
+			//  BOOT
+			// =============================================================
+
+			createStars();
+			runLoadingSequence();
+		</script>
+	</body>
+</html>
